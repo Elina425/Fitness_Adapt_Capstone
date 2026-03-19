@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import random
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -17,6 +18,10 @@ from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from scripts.task1_task2_pose_benchmark import (
     BlazePoseExtractor,
     CACHE_DIR,
@@ -26,7 +31,6 @@ from scripts.task1_task2_pose_benchmark import (
 )
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 QUALITY_LABELS = [
     "no_annotated_error",
     "knees_forward",

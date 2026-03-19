@@ -1,0 +1,8 @@
+{
+  "task_scope": "4-class squat-quality classification on a balanced subset built from the repository's real videos",
+  "why_balanced_subset": "The rarest label, knees_inward, has only 40 videos in the repository. Using 40 videos per class creates a fair architecture comparison without overwhelming the rare class.",
+  "sequence_length": 30,
+  "feature_dimension": 44,
+  "selected_pose_backbone": "MediaPipe BlazePose",
+  "transformer_adapter_note": "A bottleneck adapter transformer is used instead of DoRA because this project uses a small custom sequence encoder, not a large pretrained foundation model where DoRA is typically most useful."
+}
