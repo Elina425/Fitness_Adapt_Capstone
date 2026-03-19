@@ -9,6 +9,7 @@ from ultralytics import YOLO
 
 from fitness_adapt.features import compute_joint_angles
 from fitness_adapt.models import BiLSTMMultiHead
+from fitness_adapt.project import ProjectPaths
 
 
 def _draw_skeleton(frame: np.ndarray, points: np.ndarray):
@@ -31,9 +32,15 @@ def _quality_feedback(score: float) -> str:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", type=str, default="", help="Optional path to video file. If empty, webcam is used.")
-    parser.add_argument("--model-path", type=str, default="/workspace/outputs/bilstm_multitask.pt")
+    parser.add_argument("--root", type=str, default="", help="Optional project root. Auto-discovered if omitted.")
+    parser.add_argument("--model-path", type=str, default="", help="Optional model path. Defaults to outputs/bilstm_multitask.pt.")
+    parser.add_argument("--weights-path", type=str, default="", help="Optional YOLO weights path. Defaults to yolo11n-pose.pt in project root.")
     parser.add_argument("--window-size", type=int, default=30)
     args = parser.parse_args()
+
+    paths = ProjectPaths.from_root(args.root if args.root else None)
+    model_path = args.model_path if args.model_path else str(paths.outputs_dir / "bilstm_multitask.pt")
+    weights_path = args.weights_path if args.weights_path else str(paths.root / "yolo11n-pose.pt")
 
     cap = cv2.VideoCapture(args.video if args.video else 0)
     if not cap.isOpened():
@@ -42,13 +49,13 @@ def main():
     # Use angle features (6 dims) for primary model.
     model = BiLSTMMultiHead(input_dim=6, num_classes=1)
     try:
-        model.load_state_dict(torch.load(args.model_path, map_location="cpu"))
+        model.load_state_dict(torch.load(model_path, map_location="cpu"))
         model.eval()
     except FileNotFoundError:
-        print(f"Model not found at {args.model_path}; running overlay-only mode.")
+        print(f"Model not found at {model_path}; running overlay-only mode.")
         model = None
 
-    pose_model = YOLO("yolo11n-pose.pt")
+    pose_model = YOLO(weights_path)
     angle_window: list[np.ndarray] = []
 
     while True:

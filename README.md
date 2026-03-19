@@ -24,7 +24,7 @@ Presentation-ready structure for exercise recognition + form quality assessment 
   - Notebook: `notebooks/03_preprocess_features_train_personalize.ipynb`
   - Script: `python3 scripts/run_task3_8_pipeline.py`
 - **Task 9**: Real-time integration demo scaffold with live overlay + quality feedback.
-  - Script: `python3 scripts/run_task9_realtime_demo.py --video /workspace/videos_squat/32903_8.mp4`
+  - Script: `python3 scripts/run_task9_realtime_demo.py --video videos_squat/32903_8.mp4`
 
 ## Data Compatibility
 

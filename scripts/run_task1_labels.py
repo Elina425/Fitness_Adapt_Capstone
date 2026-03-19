@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import cv2
 
 from fitness_adapt.io_utils import load_json
@@ -16,7 +17,11 @@ def get_duration_sec(video_path):
 
 
 def main():
-    paths = ProjectPaths.from_root()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--root", type=str, default="", help="Optional project root. Auto-discovered if omitted.")
+    args = parser.parse_args()
+
+    paths = ProjectPaths.from_root(args.root if args.root else None)
     train_keys = load_json(paths.split_path("train"))
     error_fwd, error_inward = load_error_intervals(paths)
 

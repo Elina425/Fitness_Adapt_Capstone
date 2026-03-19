@@ -17,9 +17,24 @@ class ProjectPaths:
     models_dir: Path
     notebooks_dir: Path
 
+    @staticmethod
+    def discover_root(start: str | Path | None = None) -> Path:
+        """
+        Discover repository root by searching upward for `pyproject.toml` or `.git`.
+        Falls back to current working directory.
+        """
+        if start is None:
+            cur = Path.cwd().resolve()
+        else:
+            cur = Path(start).resolve()
+        for candidate in [cur, *cur.parents]:
+            if (candidate / "pyproject.toml").exists() or (candidate / ".git").exists():
+                return candidate
+        return cur
+
     @classmethod
-    def from_root(cls, root: str | Path = "/workspace") -> "ProjectPaths":
-        root_path = Path(root).resolve()
+    def from_root(cls, root: str | Path | None = None) -> "ProjectPaths":
+        root_path = cls.discover_root(root)
         data_dir = root_path / "data"
         return cls(
             root=root_path,

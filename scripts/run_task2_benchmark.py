@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from typing import List, Tuple
 
 import numpy as np
@@ -34,7 +35,11 @@ def get_union_error_intervals(video_key: str, error_fwd, error_inward) -> List[I
 
 
 def main():
-    paths = ProjectPaths.from_root()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--root", type=str, default="", help="Optional project root. Auto-discovered if omitted.")
+    args = parser.parse_args()
+
+    paths = ProjectPaths.from_root(args.root if args.root else None)
     train_keys = load_json(paths.split_path("train"))
     error_fwd = load_json(paths.error_knees_forward_path)
     error_inward = load_json(paths.error_knees_inward_path)

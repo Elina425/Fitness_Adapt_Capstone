@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import numpy as np
 import torch
@@ -11,7 +12,11 @@ from fitness_adapt.train_eval import TrainConfig, evaluate_model, personalize_on
 
 
 def main():
-    paths = ProjectPaths.from_root()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--root", type=str, default="", help="Optional project root. Auto-discovered if omitted.")
+    args = parser.parse_args()
+
+    paths = ProjectPaths.from_root(args.root if args.root else None)
     paths.processed_dir.mkdir(parents=True, exist_ok=True)
     paths.outputs_dir.mkdir(parents=True, exist_ok=True)
 
