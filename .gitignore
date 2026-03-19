@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+*_executed.ipynb
+
+# Data (large files - keep metadata, exclude binaries)
+data/sample_videos/*.mp4
+data/pose_outputs/*.npz
+data/pose_landmarker_heavy.task
+*.pt
+*.pth
+*.onnx
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Model weights
+runs/
+weights/
