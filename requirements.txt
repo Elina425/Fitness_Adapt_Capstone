@@ -1,15 +1,2 @@
-torch
-torchvision
-torchaudio
-ultralytics
-mediapipe
-opencv-python
-numpy
-matplotlib
-tqdm
-scikit-learn
-pandas
-notebook
-nbformat
-ipykernel
+.
 

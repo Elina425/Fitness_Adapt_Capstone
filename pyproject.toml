@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fitness-adapt-capstone"
+version = "0.1.0"
+description = "Exercise quality assessment pipeline with pose estimation and sequence modeling."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "torch",
+  "torchvision",
+  "torchaudio",
+  "ultralytics",
+  "mediapipe",
+  "opencv-python",
+  "numpy",
+  "matplotlib",
+  "tqdm",
+  "scikit-learn",
+  "pandas",
+  "notebook",
+  "nbformat",
+  "ipykernel",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

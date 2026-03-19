@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+src/fitness_adapt/__init__.py
+src/fitness_adapt/evaluation.py
+src/fitness_adapt/geometry.py
+src/fitness_adapt/io_utils.py
+src/fitness_adapt/labels.py
+src/fitness_adapt/pose.py
+src/fitness_adapt/project.py
+src/fitness_adapt_capstone.egg-info/PKG-INFO
+src/fitness_adapt_capstone.egg-info/SOURCES.txt
+src/fitness_adapt_capstone.egg-info/dependency_links.txt
+src/fitness_adapt_capstone.egg-info/requires.txt
+src/fitness_adapt_capstone.egg-info/top_level.txt

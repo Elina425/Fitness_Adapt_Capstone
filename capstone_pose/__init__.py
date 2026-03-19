@@ -1,7 +1,7 @@
-"""
-Capstone pose-estimation utilities.
+"""Backward-compatibility imports for old package name."""
 
-This package is intentionally lightweight: notebooks import these helpers so
-pose extraction + label computation stays consistent across experiments.
-"""
+from fitness_adapt.evaluation import *  # noqa: F401,F403
+from fitness_adapt.geometry import *  # noqa: F401,F403
+from fitness_adapt.labels import *  # noqa: F401,F403
+from fitness_adapt.pose import *  # noqa: F401,F403
 
