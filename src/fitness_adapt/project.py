@@ -30,6 +30,12 @@ class ProjectPaths:
         for candidate in [cur, *cur.parents]:
             if (candidate / "pyproject.toml").exists() or (candidate / ".git").exists():
                 return candidate
+
+        # Fallback: resolve from installed package location.
+        pkg_anchor = Path(__file__).resolve()
+        for candidate in [pkg_anchor, *pkg_anchor.parents]:
+            if (candidate / "pyproject.toml").exists() or (candidate / ".git").exists():
+                return candidate
         return cur
 
     @classmethod
