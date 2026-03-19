@@ -2,3 +2,4 @@
 scripts/__pycache__/
 *.pyc
 yolo11n-pose.pt
+*.egg-info/
