@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -17,6 +18,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 VIDEO_DIR = PROJECT_ROOT / "videos_squat"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 FIGURES_DIR = PROJECT_ROOT / "figures"
+CACHE_DIR = PROJECT_ROOT / ".cache"
 
 SPLIT_FILES = {
     "train": PROJECT_ROOT / "train_keys.json",
@@ -92,10 +94,23 @@ EXTERNAL_DATASET_OPTIONS = [
     },
 ]
 
+MEDIAPIPE_MODEL_URL = (
+    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
+    "pose_landmarker_full/float16/1/pose_landmarker_full.task"
+)
+
 
 def _read_json(path: Path):
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def ensure_mediapipe_model() -> Path:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    model_path = CACHE_DIR / "pose_landmarker_full.task"
+    if not model_path.exists():
+        urllib.request.urlretrieve(MEDIAPIPE_MODEL_URL, model_path)
+    return model_path
 
 
 def load_split_lookup() -> dict[str, str]:
@@ -318,19 +333,22 @@ class BlazePoseExtractor:
     def __init__(self):
         import mediapipe as mp
 
-        self.mp_pose = mp.solutions.pose
-        self.pose = self.mp_pose.Pose(
-            static_image_mode=False,
-            model_complexity=1,
-            enable_segmentation=False,
-            smooth_landmarks=True,
-            min_detection_confidence=0.5,
+        self.mp = mp
+        model_path = ensure_mediapipe_model()
+        options = mp.tasks.vision.PoseLandmarkerOptions(
+            base_options=mp.tasks.BaseOptions(model_asset_path=str(model_path)),
+            running_mode=mp.tasks.vision.RunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=0.5,
+            min_pose_presence_confidence=0.5,
             min_tracking_confidence=0.5,
         )
+        self.pose = mp.tasks.vision.PoseLandmarker.create_from_options(options)
 
     def infer(self, frame_bgr: np.ndarray) -> PoseInferenceOutput:
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        result = self.pose.process(frame_rgb)
+        mp_image = self.mp.Image(image_format=self.mp.ImageFormat.SRGB, data=frame_rgb)
+        result = self.pose.detect(mp_image)
         height, width = frame_bgr.shape[:2]
 
         keypoints_xy = np.zeros((17, 2), dtype=np.float32)
@@ -339,10 +357,11 @@ class BlazePoseExtractor:
         if not result.pose_landmarks:
             return PoseInferenceOutput(keypoints_xy=keypoints_xy, confidences=confidences)
 
+        landmarks = result.pose_landmarks[0]
         for target_index, source_index in enumerate(MEDIAPIPE_TO_COCO_17):
-            landmark = result.pose_landmarks.landmark[source_index]
+            landmark = landmarks[source_index]
             keypoints_xy[target_index] = [landmark.x * width, landmark.y * height]
-            confidences[target_index] = landmark.visibility
+            confidences[target_index] = getattr(landmark, "visibility", 0.0)
 
         return PoseInferenceOutput(keypoints_xy=keypoints_xy, confidences=confidences)
 

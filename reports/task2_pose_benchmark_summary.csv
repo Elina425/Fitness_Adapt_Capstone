@@ -1,0 +1,3 @@
+model_name,benchmark_videos,processed_frames,mean_effective_fps,mean_visible_keypoint_ratio,mean_fully_tracked_frame_ratio,mean_confidence,mean_temporal_jitter_proxy,selection_score,recommended_for_project
+MediaPipe BlazePose,8,591,42.22190804364056,0.6951604278074867,0.085,0.9392998516559601,0.1716624730447806,0.6585101990693394,True
+YOLO11n-pose,8,591,22.843519674897962,0.7289304812834224,0.0,0.9020064771175385,0.13501071600099268,0.5628728393576068,False

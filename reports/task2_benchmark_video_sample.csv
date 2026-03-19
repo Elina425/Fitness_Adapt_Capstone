@@ -1,0 +1,9 @@
+video_id,video_path,split,exercise_type,quality_label,has_knees_forward,has_knees_inward,knees_forward_segments,knees_inward_segments,annotated_error_segments,frame_count,fps,width,height,duration_seconds
+33166_1,videos_squat/33166_1.mp4,train,squat,knees_forward,True,False,"[[1.46, 2.8]]",[],1,119,30.0,480,480,3.966666666666667
+48484_7,videos_squat/48484_7.mp4,train,squat,knees_forward,True,False,"[[2.18, 2.84]]",[],1,107,30.0,480,480,3.566666666666667
+47614_1,videos_squat/47614_1.mp4,test,squat,knees_inward,False,True,[],"[[2.44, 3.47]]",1,119,30.0,480,600,3.966666666666667
+47099_1,videos_squat/47099_1.mp4,train,squat,knees_inward,False,True,[],"[[1.59, 2.53]]",1,88,30.0,480,600,2.933333333333333
+49203_1,videos_squat/49203_1.mp4,test,squat,multiple_annotated_errors,True,True,"[[3.53, 4.56]]","[[3.03, 4.23]]",2,141,30.0,480,600,4.7
+37691_1,videos_squat/37691_1.mp4,train,squat,multiple_annotated_errors,True,True,"[[0.7, 1.66]]","[[1.14, 2.13], [1.3, 1.98]]",3,75,30.0,480,480,2.5
+46627_3,videos_squat/46627_3.mp4,train,squat,no_annotated_error,False,False,[],[],0,66,30.0,480,480,2.2
+50559_2,videos_squat/50559_2.mp4,val,squat,no_annotated_error,False,False,[],[],0,143,30.0,480,600,4.766666666666667

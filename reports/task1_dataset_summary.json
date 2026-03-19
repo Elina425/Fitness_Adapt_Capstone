@@ -1,0 +1,25 @@
+{
+  "total_videos": 1739,
+  "exercise_types_present": [
+    "squat"
+  ],
+  "split_counts": {
+    "test": 244,
+    "train": 1136,
+    "unassigned": 116,
+    "val": 243
+  },
+  "quality_label_counts": {
+    "knees_forward": 917,
+    "knees_inward": 40,
+    "multiple_annotated_errors": 192,
+    "no_annotated_error": 590
+  },
+  "mean_duration_seconds": 3.896,
+  "median_duration_seconds": 3.467,
+  "task_1_assessment": {
+    "supports_quality_labels": true,
+    "supports_multiple_exercise_types": false,
+    "conclusion": "The repository already contains real squat videos with timestamped quality-error annotations, so it is usable for squat-quality prototyping. It does not yet contain multiple exercise classes, so later exercise-recognition stages will still need more labeled exercise types."
+  }
+}

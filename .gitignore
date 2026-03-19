@@ -1,0 +1,4 @@
+.cache/
+scripts/__pycache__/
+*.pyc
+yolo11n-pose.pt
