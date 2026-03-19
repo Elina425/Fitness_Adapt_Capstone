@@ -1,0 +1,14 @@
+# Generated outputs — do not commit
+*.png
+keypoints/
+dataset_metadata.csv
+pose_model_benchmark.csv
+project_config.json
+pose_landmarker_heavy.task
+01_dataset_and_pose_estimation_executed.ipynb
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+runs/
+yolo*.pt
+
