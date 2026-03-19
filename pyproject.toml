@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fitness-adapt-capstone"
+version = "0.1.0"
+description = "Notebook and benchmarking utilities for the Fitness Adapt capstone."
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "opencv-python",
+    "mediapipe",
+    "ultralytics",
+    "torch",
+    "scikit-learn",
+    "nbformat",
+    "nbclient",
+    "ipykernel",
+]
+
+[tool.setuptools]
+packages = ["scripts"]
