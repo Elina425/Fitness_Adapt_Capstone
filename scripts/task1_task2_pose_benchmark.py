@@ -2,19 +2,28 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-import cv2
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts._deps import raise_missing_dependency_error
+
+try:
+    import cv2
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+except ModuleNotFoundError as exc:
+    raise_missing_dependency_error(exc, script_name=Path(__file__).name)
+
+
 VIDEO_DIR = PROJECT_ROOT / "videos_squat"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 FIGURES_DIR = PROJECT_ROOT / "figures"

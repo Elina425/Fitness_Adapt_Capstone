@@ -8,19 +8,24 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-import cv2
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import torch
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
-from sklearn.model_selection import train_test_split
-from torch import nn
-from torch.utils.data import DataLoader, Dataset
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts._deps import raise_missing_dependency_error
+
+try:
+    import cv2
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    import torch
+    from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
+    from sklearn.model_selection import train_test_split
+    from torch import nn
+    from torch.utils.data import DataLoader, Dataset
+except ModuleNotFoundError as exc:
+    raise_missing_dependency_error(exc, script_name=Path(__file__).name)
 
 from scripts.task1_task2_pose_benchmark import (
     BlazePoseExtractor,
