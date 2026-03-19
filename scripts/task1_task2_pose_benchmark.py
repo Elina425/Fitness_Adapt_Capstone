@@ -110,12 +110,14 @@ MEDIAPIPE_MODEL_URL = (
 MOVENET_MODELS = [
     (
         "MoveNet Lightning",
-        "https://tfhub.dev/google/movenet/singlepose/lightning/4",
+        "https://tfhub.dev/google/lite-model/movenet/singlepose/lightning/tflite/float16/4?lite-format=tflite",
+        "movenet_lightning_float16.tflite",
         192,
     ),
     (
         "MoveNet Thunder",
-        "https://tfhub.dev/google/movenet/singlepose/thunder/4",
+        "https://tfhub.dev/google/lite-model/movenet/singlepose/thunder/tflite/float16/4?lite-format=tflite",
+        "movenet_thunder_float16.tflite",
         256,
     ),
 ]
@@ -136,6 +138,14 @@ def ensure_mediapipe_model() -> Path:
     if not model_path.exists():
         urllib.request.urlretrieve(MEDIAPIPE_MODEL_URL, model_path)
     return model_path
+
+
+def ensure_cached_download(url: str, filename: str) -> Path:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    file_path = CACHE_DIR / filename
+    if not file_path.exists():
+        urllib.request.urlretrieve(url, file_path)
+    return file_path
 
 
 def load_split_lookup() -> dict[str, str]:
@@ -435,35 +445,38 @@ class YoloPoseExtractor:
 
 
 class MoveNetExtractor:
-    def __init__(self, model_name: str, hub_url: str, input_size: int):
+    def __init__(self, model_name: str, model_url: str, cache_filename: str, input_size: int):
         try:
             import tensorflow as tf
-            import tensorflow_hub as hub
         except ModuleNotFoundError as exc:
             raise_missing_dependency_error(exc, script_name=Path(__file__).name)
 
         self.model_name = model_name
         self.tf = tf
         self.input_size = input_size
+        self.model_path = ensure_cached_download(model_url, cache_filename)
         try:
             tf.config.set_visible_devices([], "GPU")
         except Exception:
             pass
-        self.model = hub.load(hub_url)
-        self.movenet = self.model.signatures["serving_default"]
+        self.interpreter = tf.lite.Interpreter(model_path=str(self.model_path))
+        self.interpreter.allocate_tensors()
+        self.input_details = self.interpreter.get_input_details()
+        self.output_details = self.interpreter.get_output_details()
 
     def infer(self, frame_bgr: np.ndarray) -> PoseInferenceOutput:
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         height, width = frame_bgr.shape[:2]
-
-        input_image = self.tf.image.resize_with_pad(
+        resized = self.tf.image.resize_with_pad(
             self.tf.expand_dims(frame_rgb, axis=0),
             self.input_size,
             self.input_size,
         )
-        input_image = self.tf.cast(input_image, dtype=self.tf.int32)
-        outputs = self.movenet(input_image)
-        keypoints = outputs["output_0"].numpy()[0, 0]
+        input_tensor = self.tf.cast(resized, dtype=self.input_details[0]["dtype"]).numpy()
+
+        self.interpreter.set_tensor(self.input_details[0]["index"], input_tensor)
+        self.interpreter.invoke()
+        keypoints = self.interpreter.get_tensor(self.output_details[0]["index"])[0, 0]
 
         keypoints_xy = np.zeros((17, 2), dtype=np.float32)
         confidences = np.zeros(17, dtype=np.float32)
@@ -520,7 +533,7 @@ class VitPoseExtractor:
 
 def build_pose_models() -> list:
     models = [BlazePoseExtractor(), YoloPoseExtractor()]
-    models.extend(MoveNetExtractor(name, url, size) for name, url, size in MOVENET_MODELS)
+    models.extend(MoveNetExtractor(name, url, filename, size) for name, url, filename, size in MOVENET_MODELS)
     models.extend(VitPoseExtractor(name, model_id) for name, model_id in VITPOSE_MODELS)
     return models
 

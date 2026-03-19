@@ -9,6 +9,7 @@ description = "Notebook and benchmarking utilities for the Fitness Adapt capston
 requires-python = ">=3.12"
 dependencies = [
     "numpy",
+    "setuptools",
     "pandas",
     "matplotlib",
     "opencv-python",
@@ -17,7 +18,6 @@ dependencies = [
     "torch",
     "torchvision",
     "tensorflow",
-    "tensorflow-hub",
     "transformers",
     "pillow",
     "scikit-learn",
