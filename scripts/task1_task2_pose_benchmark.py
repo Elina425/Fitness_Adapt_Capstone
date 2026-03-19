@@ -107,6 +107,22 @@ MEDIAPIPE_MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
     "pose_landmarker_full/float16/1/pose_landmarker_full.task"
 )
+MOVENET_MODELS = [
+    (
+        "MoveNet Lightning",
+        "https://tfhub.dev/google/movenet/singlepose/lightning/4",
+        192,
+    ),
+    (
+        "MoveNet Thunder",
+        "https://tfhub.dev/google/movenet/singlepose/thunder/4",
+        256,
+    ),
+]
+VITPOSE_MODELS = [
+    ("ViTPose Base", "usyd-community/vitpose-base-simple"),
+    ("ViTPose++ Small", "usyd-community/vitpose-plus-small"),
+]
 
 
 def _read_json(path: Path):
@@ -418,6 +434,97 @@ class YoloPoseExtractor:
         return None
 
 
+class MoveNetExtractor:
+    def __init__(self, model_name: str, hub_url: str, input_size: int):
+        try:
+            import tensorflow as tf
+            import tensorflow_hub as hub
+        except ModuleNotFoundError as exc:
+            raise_missing_dependency_error(exc, script_name=Path(__file__).name)
+
+        self.model_name = model_name
+        self.tf = tf
+        self.input_size = input_size
+        try:
+            tf.config.set_visible_devices([], "GPU")
+        except Exception:
+            pass
+        self.model = hub.load(hub_url)
+        self.movenet = self.model.signatures["serving_default"]
+
+    def infer(self, frame_bgr: np.ndarray) -> PoseInferenceOutput:
+        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        height, width = frame_bgr.shape[:2]
+
+        input_image = self.tf.image.resize_with_pad(
+            self.tf.expand_dims(frame_rgb, axis=0),
+            self.input_size,
+            self.input_size,
+        )
+        input_image = self.tf.cast(input_image, dtype=self.tf.int32)
+        outputs = self.movenet(input_image)
+        keypoints = outputs["output_0"].numpy()[0, 0]
+
+        keypoints_xy = np.zeros((17, 2), dtype=np.float32)
+        confidences = np.zeros(17, dtype=np.float32)
+        keypoints_xy[:, 0] = keypoints[:, 1] * width
+        keypoints_xy[:, 1] = keypoints[:, 0] * height
+        confidences[:] = keypoints[:, 2]
+        return PoseInferenceOutput(keypoints_xy=keypoints_xy, confidences=confidences)
+
+    def close(self):
+        return None
+
+
+class VitPoseExtractor:
+    def __init__(self, model_name: str, model_id: str):
+        try:
+            import torch
+            from PIL import Image
+            from transformers import AutoProcessor, VitPoseForPoseEstimation
+        except ModuleNotFoundError as exc:
+            raise_missing_dependency_error(exc, script_name=Path(__file__).name)
+
+        self.model_name = model_name
+        self.torch = torch
+        self.Image = Image
+        self.processor = AutoProcessor.from_pretrained(model_id)
+        self.model = VitPoseForPoseEstimation.from_pretrained(model_id)
+        self.model.eval()
+
+    def infer(self, frame_bgr: np.ndarray) -> PoseInferenceOutput:
+        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        pil_image = self.Image.fromarray(frame_rgb)
+        height, width = frame_bgr.shape[:2]
+
+        boxes = np.array([[0.0, 0.0, float(width), float(height)]], dtype=np.float32)
+        inputs = self.processor(images=pil_image, boxes=[boxes], return_tensors="pt")
+        with self.torch.no_grad():
+            outputs = self.model(**inputs)
+
+        pose_results = self.processor.post_process_pose_estimation(outputs, boxes=[boxes])
+        keypoints_xy = np.zeros((17, 2), dtype=np.float32)
+        confidences = np.zeros(17, dtype=np.float32)
+
+        if not pose_results or not pose_results[0]:
+            return PoseInferenceOutput(keypoints_xy=keypoints_xy, confidences=confidences)
+
+        pose = pose_results[0][0]
+        keypoints_xy = np.asarray(pose["keypoints"], dtype=np.float32)
+        confidences = np.asarray(pose["scores"], dtype=np.float32)
+        return PoseInferenceOutput(keypoints_xy=keypoints_xy, confidences=confidences)
+
+    def close(self):
+        return None
+
+
+def build_pose_models() -> list:
+    models = [BlazePoseExtractor(), YoloPoseExtractor()]
+    models.extend(MoveNetExtractor(name, url, size) for name, url, size in MOVENET_MODELS)
+    models.extend(VitPoseExtractor(name, model_id) for name, model_id in VITPOSE_MODELS)
+    return models
+
+
 def process_video_with_model(
     model,
     video_path: Path,
@@ -490,15 +597,23 @@ def save_overlay_comparison(
     if frame_bgr is None:
         raise RuntimeError(f"Could not read overlay frame from {video_path}")
 
-    models = [BlazePoseExtractor(), YoloPoseExtractor()]
+    models = build_pose_models()
     try:
         rendered_frames = []
         titles = ["Original"]
         rendered_frames.append(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
 
+        palette_values = [
+            (80, 220, 100),
+            (70, 140, 255),
+            (245, 166, 35),
+            (180, 120, 255),
+            (255, 99, 132),
+            (54, 162, 235),
+        ]
         palette = {
-            "MediaPipe BlazePose": (80, 220, 100),
-            "YOLO11n-pose": (70, 140, 255),
+            model.model_name: palette_values[index % len(palette_values)]
+            for index, model in enumerate(models)
         }
 
         for model in models:
@@ -513,10 +628,15 @@ def save_overlay_comparison(
             rendered_frames.append(cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB))
             titles.append(model.model_name)
 
-        figure, axes = plt.subplots(1, len(rendered_frames), figsize=(15, 5))
+        ncols = 3
+        nrows = int(np.ceil(len(rendered_frames) / ncols))
+        figure, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4.8 * nrows))
+        axes = np.atleast_1d(axes).ravel()
         for axis, image, title in zip(axes, rendered_frames, titles):
             axis.imshow(image)
             axis.set_title(title)
+            axis.axis("off")
+        for axis in axes[len(rendered_frames) :]:
             axis.axis("off")
 
         figure.suptitle(f"Pose overlay comparison for {video_path.stem}")
@@ -537,7 +657,7 @@ def benchmark_pose_models(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    models = [BlazePoseExtractor(), YoloPoseExtractor()]
+    models = build_pose_models()
     detail_rows: list[dict] = []
 
     try:
@@ -602,7 +722,7 @@ def benchmark_pose_models(
 
 def run_pipeline(
     total_benchmark_videos: int = 8,
-    max_frames: int = 75,
+    max_frames: int = 30,
     confidence_threshold: float = 0.5,
 ) -> dict[str, object]:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -648,7 +768,7 @@ def run_pipeline(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Task 1 and 2 dataset audit + pose benchmark")
     parser.add_argument("--benchmark-videos", type=int, default=8)
-    parser.add_argument("--max-frames", type=int, default=75)
+    parser.add_argument("--max-frames", type=int, default=30)
     parser.add_argument("--confidence-threshold", type=float, default=0.5)
     return parser.parse_args()
 

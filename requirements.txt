@@ -5,6 +5,11 @@ opencv-python
 mediapipe
 ultralytics
 torch
+torchvision
+tensorflow
+tensorflow-hub
+transformers
+pillow
 scikit-learn
 nbformat
 nbclient
