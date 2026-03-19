@@ -1,0 +1,16 @@
+numpy
+setuptools
+pandas
+matplotlib
+opencv-python
+mediapipe
+ultralytics
+torch
+torchvision
+tensorflow
+transformers
+pillow
+scikit-learn
+nbformat
+nbclient
+ipykernel

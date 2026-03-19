@@ -1,0 +1,4 @@
+dataset_name,source,exercise_types,quality_supervision,fit_for_capstone
+Fitness-AQA,Parmar et al. (arXiv:2202.14019),"BackSquat, BarbellRow, OverheadPress",Expert-annotated workout errors and form assessment labels,"Best paper-aligned public option, but not included in this repository."
+UI-PRMD,University of Idaho Physical Rehabilitation Movement Dataset,10 rehab-style movements including deep squat and inline lunge,Correct vs incorrect execution examples,"Useful backup for form-quality experiments, but less gym-specific than Fitness-AQA."
+Repo squat videos,This project,Squat only,Timestamped knees_forward / knees_inward annotations,"Best real data available locally right now; enough for squat-quality prototyping, not enough for multi-exercise classification."
