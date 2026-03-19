@@ -504,6 +504,9 @@ class VitPoseExtractor:
         self.processor = AutoProcessor.from_pretrained(model_id)
         self.model = VitPoseForPoseEstimation.from_pretrained(model_id)
         self.model.eval()
+        self.requires_dataset_index = bool(
+            getattr(getattr(self.model.config, "backbone_config", None), "num_experts", 1) > 1
+        )
 
     def infer(self, frame_bgr: np.ndarray) -> PoseInferenceOutput:
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
@@ -512,6 +515,8 @@ class VitPoseExtractor:
 
         boxes = np.array([[0.0, 0.0, float(width), float(height)]], dtype=np.float32)
         inputs = self.processor(images=pil_image, boxes=[boxes], return_tensors="pt")
+        if self.requires_dataset_index:
+            inputs["dataset_index"] = self.torch.tensor([0], dtype=self.torch.long)
         with self.torch.no_grad():
             outputs = self.model(**inputs)
 
@@ -531,11 +536,36 @@ class VitPoseExtractor:
         return None
 
 
-def build_pose_models() -> list:
-    models = [BlazePoseExtractor(), YoloPoseExtractor()]
-    models.extend(MoveNetExtractor(name, url, filename, size) for name, url, filename, size in MOVENET_MODELS)
-    models.extend(VitPoseExtractor(name, model_id) for name, model_id in VITPOSE_MODELS)
-    return models
+def available_pose_model_builders() -> dict[str, callable]:
+    builders = {
+        "MediaPipe BlazePose": lambda: BlazePoseExtractor(),
+        "YOLO11n-pose": lambda: YoloPoseExtractor(),
+    }
+    builders.update(
+        {
+            name: (lambda name=name, url=url, filename=filename, size=size: MoveNetExtractor(name, url, filename, size))
+            for name, url, filename, size in MOVENET_MODELS
+        }
+    )
+    builders.update(
+        {
+            name: (lambda name=name, model_id=model_id: VitPoseExtractor(name, model_id))
+            for name, model_id in VITPOSE_MODELS
+        }
+    )
+    return builders
+
+
+def build_pose_models(selected_model_names: list[str] | None = None) -> list:
+    builders = available_pose_model_builders()
+    if selected_model_names is None:
+        selected_model_names = list(builders.keys())
+
+    unknown = [name for name in selected_model_names if name not in builders]
+    if unknown:
+        raise ValueError(f"Unknown pose model(s): {unknown}. Available: {list(builders.keys())}")
+
+    return [builders[name]() for name in selected_model_names]
 
 
 def process_video_with_model(
@@ -591,6 +621,7 @@ def save_overlay_comparison(
     video_path: Path,
     output_path: Path,
     confidence_threshold: float,
+    model_names: list[str] | None = None,
     frame_index: int = 30,
 ) -> None:
     capture = cv2.VideoCapture(str(video_path))
@@ -610,7 +641,7 @@ def save_overlay_comparison(
     if frame_bgr is None:
         raise RuntimeError(f"Could not read overlay frame from {video_path}")
 
-    models = build_pose_models()
+    models = build_pose_models(selected_model_names=model_names)
     try:
         rendered_frames = []
         titles = ["Original"]
@@ -667,10 +698,11 @@ def benchmark_pose_models(
     output_dir: Path,
     max_frames: int,
     confidence_threshold: float,
+    model_names: list[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    models = build_pose_models()
+    models = build_pose_models(selected_model_names=model_names)
     detail_rows: list[dict] = []
 
     try:
@@ -737,6 +769,7 @@ def run_pipeline(
     total_benchmark_videos: int = 8,
     max_frames: int = 30,
     confidence_threshold: float = 0.5,
+    model_names: list[str] | None = None,
 ) -> dict[str, object]:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
@@ -757,6 +790,7 @@ def run_pipeline(
         output_dir=REPORTS_DIR,
         max_frames=max_frames,
         confidence_threshold=confidence_threshold,
+        model_names=model_names,
     )
 
     overlay_video = PROJECT_ROOT / benchmark_videos.iloc[0]["video_path"]
@@ -765,6 +799,7 @@ def run_pipeline(
         video_path=overlay_video,
         output_path=overlay_path,
         confidence_threshold=confidence_threshold,
+        model_names=model_names,
     )
 
     return {
@@ -783,15 +818,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--benchmark-videos", type=int, default=8)
     parser.add_argument("--max-frames", type=int, default=30)
     parser.add_argument("--confidence-threshold", type=float, default=0.5)
+    parser.add_argument(
+        "--model-names",
+        type=str,
+        default="",
+        help="Comma-separated model names to benchmark. Empty means all available models.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    selected_model_names = [item.strip() for item in args.model_names.split(",") if item.strip()] or None
     outputs = run_pipeline(
         total_benchmark_videos=args.benchmark_videos,
         max_frames=args.max_frames,
         confidence_threshold=args.confidence_threshold,
+        model_names=selected_model_names,
     )
 
     recommended_model = outputs["benchmark_summary"].loc[0, "model_name"]
