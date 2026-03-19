@@ -7,4 +7,6 @@ __pycache__/
 outputs/
 *.ipynb_checkpoints
 *.egg-info/
+data/processed/*.npz
+data/interim/*.json
 
