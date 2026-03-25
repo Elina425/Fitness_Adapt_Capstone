@@ -11,6 +11,7 @@ tensorflow
 transformers
 pillow
 scikit-learn
+kagglehub
 nbformat
 nbclient
 ipykernel
